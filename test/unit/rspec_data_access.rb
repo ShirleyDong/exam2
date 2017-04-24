@@ -66,6 +66,7 @@ describe DataAccess do
       context "ignoring the local cache " do 
         context "related book is not in the remote cache" do
           it "should update in the database only" do
+
             expect(@sqlite_database).to receive(:updateBook).with(@book1)
             expect(@dalli_client).to receive(:get).with("v_#{@book1.isbn}" ).
                    and_return(nil)
@@ -111,9 +112,36 @@ describe DataAccess do
         context "book is new" do
           it "should add it to database but leave remote cache unchanged" do
               # .... to be completed ....
+            expect(@sqlite_database).to receive(:updateStock).with(@book1)
+            expect(@dalli_client).to receive(:get).with("v_#{@book1.isbn}" ).
+                   and_return(nil)
+            @data_access.updateStock(@book1) 
+
          end
        end 
-         # ..... to be completed .......
-    end  
+
+       context "book is exist" do
+          before(:each) do
+            expect(@dalli_client).to receive(:get).with('v_1111').and_return(2)
+            expect(@dalli_client).to receive(:get).with('1111_2').and_return  @book1.to_cache
+            @data_access.isbnSearch('1111') 
+        end     
+        context "it is also in remote cache" do
+          it "should update in both cache and database" do
+            expect(@sqlite_database).to receive(:updateStock).with(@book1)
+            expect(@dalli_client).to receive(:get).with("v_#{@book1.isbn}" ).
+                   and_return(2)
+            expect(@dalli_client).to receive(:set).with("v_#{@book1.isbn}",3)
+            expect(@dalli_client).to receive(:set).with("#{@book1.isbn}_3",@book1.to_cache )                 
+            @data_access.updateBook(@book1) 
+            expect(@dalli_client).to receive(:get).with("v_#{@book1.isbn}" ).
+                   and_return(3)  
+             @data_access.isbnSearch(@book1.isbn)                  
+           end
+       end
+       end 
+
+       
+  
 
 end
